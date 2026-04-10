@@ -18,7 +18,7 @@ export function ControlDeck({ onHaltAll, onNewDirective, onAuditLog, halted }: P
         activeOpacity={0.7}
       >
         <Text style={styles.btnIcon}>⛔</Text>
-        <Text style={styles.haltText}>{halted ? 'RESUME' : 'HALT ALL'}</Text>
+        <Text style={styles.haltText}>{halted ? 'RESUME' : 'HALT'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity

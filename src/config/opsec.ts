@@ -3,12 +3,15 @@
 // Strip sensitive terms before any export or share
 
 export const CODE_WORDS: Record<string, string> = {
-  SINGULARITY_EQUATION: 'Psi Protocol',
-  ORCHESTRATED_COLLAPSE: 'Phase Transition Event',
-  NEMOPACK: 'Compression Layer v1',
-  NCL: 'Directive Syntax',
-  GAGI_CONSTELLATION: 'The Lanes',
-  CPN: 'Operator',
+  'SINGULARITY EQUATION': 'Psi Protocol',
+  'SINGULARITY_EQUATION': 'Psi Protocol',
+  'ORCHESTRATED COLLAPSE': 'Phase Transition Event',
+  'ORCHESTRATED_COLLAPSE': 'Phase Transition Event',
+  'NEMOPACK': 'Compression Layer v1',
+  'NCL': 'Directive Syntax',
+  'GAGI CONSTELLATION': 'The Lanes',
+  'GAGI_CONSTELLATION': 'The Lanes',
+  'CPN': 'Operator',
 };
 
 export const OPSEC_RULES = {
@@ -18,10 +21,14 @@ export const OPSEC_RULES = {
   NO_CLOUD_TELEMETRY: true,
 } as const;
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function sanitize(text: string): string {
   let clean = text;
   for (const [sensitive, codeWord] of Object.entries(CODE_WORDS)) {
-    clean = clean.replace(new RegExp(sensitive, 'gi'), codeWord);
+    clean = clean.replace(new RegExp(escapeRegex(sensitive), 'gi'), codeWord);
   }
   return clean;
 }

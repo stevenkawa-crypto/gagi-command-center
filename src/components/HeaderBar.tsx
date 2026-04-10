@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, psiColor } from '../theme/tacticalDark';
+import { CODE_WORDS } from '../config/opsec';
 import type { NetMode } from '../types';
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 export function HeaderBar({ globalPsi, netMode, onToggleNet }: Props) {
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>GAGI CONSTELLATION</Text>
+      <Text style={styles.logo}>{CODE_WORDS['GAGI CONSTELLATION'] || 'The Lanes'}</Text>
       <Text style={[styles.psi, { color: psiColor(globalPsi) }]}>
         Ψ {globalPsi.toFixed(2)}
       </Text>

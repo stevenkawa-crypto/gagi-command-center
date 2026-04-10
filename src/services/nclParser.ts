@@ -8,11 +8,10 @@ const VALID_BLAST: BlastRadius[] = ['GLOBAL', 'LANE', 'DIRECTIVE'];
 
 export function generateTraceId(): string {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const digits = '0123456789';
-  const rc = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * 26)]).join('');
-  const rd = Array.from({ length: 3 }, () => digits[Math.floor(Math.random() * 10)]).join('');
-  return `NP-${date}-${rc}-${rd}`;
+  const bytes = new Uint8Array(8);
+  for (let i = 0; i < 8; i++) bytes[i] = Math.floor(Math.random() * 256);
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  return `NP-${date}-${hex}`;
 }
 
 export interface ValidationResult {

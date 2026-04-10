@@ -3,6 +3,7 @@
 
 import * as SQLite from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
+import { sanitize } from '../config/opsec';
 import type { AuditEntry } from '../types';
 
 let db: SQLite.SQLiteDatabase | null = null;
@@ -44,6 +45,8 @@ export async function appendAudit(
   const seq = last ? last.seq + 1 : 1;
   const prevHash = last ? last.hash : '0000000000000000';
   const timestamp = Date.now();
+
+  payloadJson = sanitize(payloadJson);
 
   const hashInput = `${prevHash}|${payloadJson}|${timestamp}|${traceId}|${seq}`;
   const hash = await Crypto.digestStringAsync(
