@@ -11,6 +11,7 @@
   "dependencies": {
     "expo": "~54.0.33",
     "expo-crypto": "^55.0.14",
+    "expo-dev-client": "~6.0.20",
     "expo-sqlite": "^55.0.15",
     "expo-status-bar": "~3.0.9",
     "nativewind": "^4.2.3",
