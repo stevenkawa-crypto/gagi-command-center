@@ -11,6 +11,7 @@ import { useConstellationStore } from './store/constellationStore';
 import { initDb, getAuditLog, verifyChain } from './services/storage';
 import { validate, buildDirective } from './services/nclParser';
 import { startMockTelemetry, stopMockTelemetry, subscribe } from './services/localExecutor';
+import * as api from './services/apiClient';
 import type { NetMode, AuditEntry, PsiUpdate } from './types';
 
 type Screen = 'dashboard' | 'audit';
@@ -25,15 +26,24 @@ export default function App() {
 
   const {
     lanes, selectedLaneId, globalPsi, halted,
-    selectLane, addDirective, haltAll, resumeAll, updateLanePsi,
+    selectLane, addDirective, haltAll, resumeAll, updateLanePsi, seedFromServer,
   } = useConstellationStore();
 
   const selectedLane = lanes.find(l => l.id === selectedLaneId) ?? null;
 
+  // Init DB + probe server + seed lanes
   useEffect(() => {
     (async () => {
       await initDb();
       setDbReady(true);
+
+      // Probe server and seed real lanes if reachable
+      api.setMode(netMode);
+      const online = await api.probeServer();
+      if (online) {
+        await seedFromServer();
+      }
+
       const entries = await getAuditLog(50);
       setAuditEntries(entries);
       const valid = await verifyChain();
@@ -41,6 +51,7 @@ export default function App() {
     })();
   }, []);
 
+  // Mock telemetry — runs when LOCAL or server unreachable
   useEffect(() => {
     startMockTelemetry();
     const unsub = subscribe((event) => {
@@ -52,8 +63,22 @@ export default function App() {
   }, []);
 
   const refreshAudit = async () => {
-    const entries = await getAuditLog(50);
-    setAuditEntries(entries);
+    // Merge local + server audit when online
+    const localEntries = await getAuditLog(50);
+    let merged = localEntries;
+
+    if (api.isOnline()) {
+      const serverEntries = await api.fetchAudit(24);
+      if (serverEntries) {
+        const localTraceIds = new Set(localEntries.map(e => e.traceId));
+        const newServerEntries = serverEntries.filter(e => !localTraceIds.has(e.traceId));
+        merged = [...localEntries, ...newServerEntries]
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, 100);
+      }
+    }
+
+    setAuditEntries(merged);
     const valid = await verifyChain();
     setChainValid(valid);
   };
@@ -61,7 +86,14 @@ export default function App() {
   const toggleNet = () => {
     const modes: NetMode[] = ['LOCAL', 'SOVEREIGN', 'CLOUD'];
     const idx = modes.indexOf(netMode);
-    setNetMode(modes[(idx + 1) % modes.length]);
+    const next = modes[(idx + 1) % modes.length];
+    setNetMode(next);
+    api.setMode(next);
+
+    // Re-seed lanes when switching to SOVEREIGN
+    if (next !== 'LOCAL') {
+      seedFromServer();
+    }
   };
 
   const handleHalt = () => {

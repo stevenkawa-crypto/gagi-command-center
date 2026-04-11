@@ -1,12 +1,14 @@
 // Constellation Store — Zustand state management
 // Lane-first architecture: lanes are the primary unit, not messages
+// Online: routes through apiClient to CCW server
+// Offline: falls back to local mock data
 
 import { create } from 'zustand';
-import type { Lane, NCLDirective, TelemetryInput, LaneStatus } from '../types';
+import type { Lane, NCLDirective, LaneStatus } from '../types';
 import { getDefaultLanes, computeGlobalPsi } from '../services/localExecutor';
-import { computePsi, computePhi, phiStatus } from '../services/telemetryEngine';
 import { buildDirective, generateTraceId } from '../services/nclParser';
 import { appendAudit } from '../services/storage';
+import * as api from '../services/apiClient';
 
 interface ConstellationStore {
   lanes: Lane[];
@@ -15,12 +17,14 @@ interface ConstellationStore {
   halted: boolean;
 
   selectLane: (id: string | null) => void;
+  seedFromServer: () => Promise<void>;
   addDirective: (directive: NCLDirective) => Promise<string>;
   haltAll: () => void;
   resumeAll: () => void;
   revokeDirective: (traceId: string) => void;
   updateLanePsi: (laneId: string, psi: number) => void;
   updateLaneStatus: (laneId: string, status: LaneStatus) => void;
+  setLanes: (lanes: Lane[]) => void;
 }
 
 export const useConstellationStore = create<ConstellationStore>((set, get) => ({
@@ -31,9 +35,40 @@ export const useConstellationStore = create<ConstellationStore>((set, get) => ({
 
   selectLane: (id) => set({ selectedLaneId: id }),
 
+  seedFromServer: async () => {
+    const serverLanes = await api.fetchLanes();
+    if (serverLanes && serverLanes.length > 0) {
+      set({ lanes: serverLanes, globalPsi: computeGlobalPsi(serverLanes) });
+    }
+  },
+
   addDirective: async (directive) => {
     const traceId = directive.traceId || generateTraceId();
 
+    // Try server-side NCL execution first
+    if (api.isOnline()) {
+      const result = await api.submitDirective({
+        type: directive.type,
+        name: directive.payload.slice(0, 50),
+        assign: directive.target === 'ALL' ? 'coding' : directive.target,
+        priority: directive.highSensitivity ? 'HIGH' : 'LOW',
+        gate: directive.requiresCpnApproval ? 'Tier3' : 'Tier1',
+        timeout: '5m',
+        description: directive.payload,
+      });
+
+      if (result) {
+        await appendAudit(
+          `DIRECTIVE_${directive.type}`,
+          directive.target,
+          result.trace_id,
+          JSON.stringify({ ...directive, serverResponse: result.status })
+        );
+        return result.trace_id;
+      }
+    }
+
+    // Fallback: local-only audit + mock processing
     await appendAudit(
       `DIRECTIVE_${directive.type}`,
       directive.target,
@@ -41,7 +76,6 @@ export const useConstellationStore = create<ConstellationStore>((set, get) => ({
       JSON.stringify(directive)
     );
 
-    // Mark target lane as PROCESSING
     set((state) => ({
       lanes: state.lanes.map(l =>
         l.id === directive.target || directive.target === 'ALL'
@@ -50,7 +84,6 @@ export const useConstellationStore = create<ConstellationStore>((set, get) => ({
       ),
     }));
 
-    // Simulate completion after 2s
     setTimeout(() => {
       set((state) => ({
         lanes: state.lanes.map(l =>
@@ -96,4 +129,6 @@ export const useConstellationStore = create<ConstellationStore>((set, get) => ({
       lanes: state.lanes.map(l => l.id === laneId ? { ...l, status } : l),
     }));
   },
+
+  setLanes: (lanes) => set({ lanes, globalPsi: computeGlobalPsi(lanes) }),
 }));
