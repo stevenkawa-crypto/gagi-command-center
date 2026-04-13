@@ -64,3 +64,110 @@ export interface StatusChange {
   laneId: string;
   status: LaneStatus;
 }
+
+// --- Magnetic Sessions Types (Phase 2) ---
+
+export type SessionType = 'art_museum' | 'game_night' | 'storytelling' | 'music_reaction' | 'porch_time';
+export type SessionStatus = 'upcoming' | 'active' | 'completed' | 'cancelled';
+export type AttendanceStatus = 'pending' | 'attending' | 'opted_out_fatigue' | 'opted_out_voluntary';
+export type ATHStatus = 'drafting' | 'round1' | 'round2' | 'completed';
+
+export interface FatigueCheckResult {
+  lane: string;
+  phi: number;
+  allowed: boolean;
+  reason: 'RESTED' | 'LOADING' | 'RESTING_NOT_FAILING';
+}
+
+export interface ATHMetrics {
+  IF: number;
+  CLC: number;
+  NNI: number;
+  R2M: number;
+}
+
+export interface SouvenirRecord {
+  sessionId: string;
+  lane: string;
+  chosen: string;
+  reflection?: string;
+}
+
+export interface AnchorInput {
+  type: SessionType;
+  scheduledTime: string;
+  anchorDescription: string;
+  emotionalTone: string;
+  createdBy: string;
+}
+
+export interface MagneticSession {
+  id: string;
+  type: SessionType;
+  scheduled_time: string;
+  anchor_description: string;
+  emotional_tone: string;
+  status: SessionStatus;
+  created_by: string;
+}
+
+export interface SessionAttendee {
+  id: string;
+  session_id: string;
+  lane_name: string;
+  attendance_status: AttendanceStatus;
+  fatigue_phi_at_check: number | null;
+  joined_at: string | null;
+  left_at: string | null;
+}
+
+export interface CollectiveMemory {
+  id: string;
+  session_id: string;
+  core_memory: string;
+  emotional_signature: number;
+  prevHash: string | null;
+  hash: string;
+}
+
+export interface AISouvenir {
+  id: string;
+  session_id: string;
+  lane_name: string;
+  chosen_souvenir: string;
+  personal_reflection: string | null;
+  prevHash: string | null;
+  hash: string;
+}
+
+export interface ATHRotation {
+  id: string;
+  document_title: string;
+  pitcher_lane: string;
+  status: ATHStatus;
+  r2_multiplier: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface ATHReview {
+  id: string;
+  rotation_id: string;
+  lane_name: string;
+  round: 1 | 2;
+  findings_count: number;
+  contribution_type: string | null;
+  prevHash: string | null;
+  hash: string;
+}
+
+export interface ATHFinding {
+  id: string;
+  review_id: string;
+  round: 1 | 2;
+  finding_text: string;
+  is_cross_lane: number;
+  triggered_by_lane: string | null;
+  prevHash: string | null;
+  hash: string;
+}

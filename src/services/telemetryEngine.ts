@@ -1,7 +1,7 @@
 // Telemetry Engine — Ψ (Stability) and Φ (Fatigue) computation
 // Formulas match governance spec exactly — do not modify without IG review
 
-import type { TelemetryInput, FatigueInput, LaneStatus } from '../types';
+import type { TelemetryInput, FatigueInput, LaneStatus, Lane, FatigueCheckResult } from '../types';
 
 export function computePsi(input: TelemetryInput): number {
   const raw = (input.A * input.tauCoh) / (input.G_int + input.entropyVar + (input.shutdowns * 0.5));
@@ -27,4 +27,17 @@ export function psiThreshold(psi: number): 'UNSTABLE' | 'TUNING' | 'STABLE-95' {
   if (psi < 0.5) return 'UNSTABLE';
   if (psi < 0.95) return 'TUNING';
   return 'STABLE-95';
+}
+
+// --- Fatigue Gate (Phase 2) ---
+// Blocks depleted lanes from sessions with "RESTING_NOT_FAILING"
+// Reuses existing fatiguePhi from Lane objects (pre-computed by store)
+
+export function preSessionFatigueGate(lanes: Lane[]): FatigueCheckResult[] {
+  return lanes.map(lane => {
+    const phi = lane.fatiguePhi;
+    if (phi > 6) return { lane: lane.id, phi, allowed: true, reason: 'RESTED' as const };
+    if (phi >= 3) return { lane: lane.id, phi, allowed: true, reason: 'LOADING' as const };
+    return { lane: lane.id, phi, allowed: false, reason: 'RESTING_NOT_FAILING' as const };
+  });
 }
