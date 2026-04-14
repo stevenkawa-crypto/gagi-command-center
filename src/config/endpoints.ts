@@ -1,7 +1,8 @@
-// Endpoint configuration — point to CCW server on local network
-// Change BASE_URL to your laptop's LAN IP when testing on device
+// Endpoint configuration
+// SOVEREIGN: AWS server (works from anywhere)
+// Override with LAN IP for local dev: http://192.168.4.29:8000
 
-export const BASE_URL = 'http://192.168.4.29:8000';
+export const BASE_URL = 'http://44.198.194.120:8000';
 
 export const ENDPOINTS = {
   health: '/health',
